@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>QQ 临时会话工具</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0d0f14;
+    --bg2: #13161e;
+    --bg3: #1a1e28;
+    --border: rgba(255,255,255,0.07);
+    --border2: rgba(255,255,255,0.12);
+    --accent: #4e9eff;
+    --accent2: #2979d9;
+    --accent-glow: rgba(78,158,255,0.18);
+    --text: #e8ecf4;
+    --text2: #8a93a8;
+    --text3: #525a6e;
+    --success: #3ecf74;
+    --danger: #ff5f5f;
+    --warn: #f0a500;
+    --radius: 10px;
+    --radius-lg: 14px;
+    --font: 'Noto Sans SC', sans-serif;
+    --mono: 'JetBrains Mono', monospace;
+  }
+
+  body {
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 0;
+  }
+
+  /* layout */
+  .app {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 40px 24px 60px;
+  }
+
+  .header {
+    margin-bottom: 36px;
+  }
+  .header-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--accent-glow);
+    border: 1px solid rgba(78,158,255,0.3);
+    border-radius: 20px;
+    padding: 4px 12px;
+    font-size: 12px; font-weight: 500; color: var(--accent);
+    letter-spacing: 0.04em;
+    margin-bottom: 16px;
+  }
+  .header-badge span { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); display: inline-block; animation: pulse 2s infinite; }
+  .header h1 { font-size: 28px; font-weight: 700; letter-spacing: -0.5px; line-height: 1.2; }
+  .header h1 em { font-style: normal; color: var(--accent); }
+  .header p { font-size: 14px; color: var(--text2); margin-top: 8px; line-height: 1.6; }
+
+  /* tabs */
+  .tabs {
+    display: flex; gap: 4px;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 4px;
+    margin-bottom: 24px;
+  }
+  .tab {
+    flex: 1; padding: 9px 0;
+    border: none; border-radius: var(--radius);
+    font-family: var(--font); font-size: 14px; font-weight: 500;
+    cursor: pointer; transition: all 0.2s;
+    background: transparent; color: var(--text2);
+  }
+  .tab.active { background: var(--bg2); color: var(--text); box-shadow: 0 1px 4px rgba(0,0,0,0.4); }
+  .tab:hover:not(.active) { color: var(--text); }
+
+  /* panels */
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  /* card */
+  .card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+  .card-label {
+    font-size: 12px; font-weight: 500; color: var(--text3);
+    letter-spacing: 0.08em; text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+
+  /* input row */
+  .input-row { display: flex; gap: 10px; }
+  .input-row input { flex: 1; }
+
+  input[type=text], input[type=number], textarea, select {
+    width: 100%;
+    background: var(--bg3);
+    border: 1px solid var(--border2);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-family: var(--font); font-size: 14px;
+    padding: 10px 14px;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  input:focus, textarea:focus, select:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-glow);
+  }
+  input::placeholder, textarea::placeholder { color: var(--text3); }
+  textarea { resize: vertical; line-height: 1.6; }
+  select option { background: var(--bg3); }
+
+  /* buttons */
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    padding: 10px 18px; border-radius: var(--radius);
+    font-family: var(--font); font-size: 14px; font-weight: 500;
+    cursor: pointer; border: none; transition: all 0.18s;
+    white-space: nowrap;
+  }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { background: #3d8df0; }
+  .btn-primary:active { transform: scale(0.97); }
+  .btn-ghost { background: var(--bg3); color: var(--text2); border: 1px solid var(--border2); }
+  .btn-ghost:hover { color: var(--text); border-color: var(--border2); background: var(--border); }
+  .btn-danger { background: rgba(255,95,95,0.12); color: var(--danger); border: 1px solid rgba(255,95,95,0.2); }
+  .btn-danger:hover { background: rgba(255,95,95,0.2); }
+  .btn-success { background: rgba(62,207,116,0.12); color: var(--success); border: 1px solid rgba(62,207,116,0.2); }
+  .btn-sm { padding: 6px 12px; font-size: 12px; }
+
+  /* result link box */
+  .link-box {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 14px;
+    font-family: var(--mono); font-size: 13px; color: var(--accent);
+    word-break: break-all; line-height: 1.5;
+    margin: 12px 0;
+  }
+
+  .btn-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
+
+  /* QQ list */
+  .qq-list { display: flex; flex-direction: column; gap: 8px; }
+  .qq-item {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--bg3); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 10px 14px;
+    transition: border-color 0.2s;
+  }
+  .qq-item:hover { border-color: var(--border2); }
+  .qq-avatar {
+    width: 32px; height: 32px; border-radius: 50%;
+    background: var(--accent-glow);
+    border: 1px solid rgba(78,158,255,0.3);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700; color: var(--accent);
+    flex-shrink: 0;
+  }
+  .qq-number { font-family: var(--mono); font-size: 14px; color: var(--text); flex: 1; }
+  .qq-actions { display: flex; gap: 6px; }
+  .qq-status {
+    font-size: 11px; padding: 2px 8px; border-radius: 20px; font-weight: 500;
+  }
+  .status-pending { background: rgba(240,165,0,0.12); color: var(--warn); border: 1px solid rgba(240,165,0,0.2); }
+  .status-sent { background: rgba(62,207,116,0.12); color: var(--success); border: 1px solid rgba(62,207,116,0.2); }
+  .status-skip { background: rgba(255,255,255,0.05); color: var(--text3); border: 1px solid var(--border); }
+
+  /* progress */
+  .progress-bar {
+    width: 100%; height: 4px;
+    background: var(--bg3);
+    border-radius: 2px; overflow: hidden;
+    margin: 12px 0;
+  }
+  .progress-fill {
+    height: 100%; background: var(--accent);
+    border-radius: 2px;
+    transition: width 0.4s ease;
+  }
+
+  /* stats row */
+  .stats-row { display: flex; gap: 12px; flex-wrap: wrap; margin: 12px 0; }
+  .stat-card {
+    flex: 1; min-width: 80px;
+    background: var(--bg3); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 10px 14px;
+    text-align: center;
+  }
+  .stat-num { font-size: 22px; font-weight: 700; font-family: var(--mono); }
+  .stat-label { font-size: 11px; color: var(--text3); margin-top: 2px; }
+
+  /* message preview */
+  .msg-preview {
+    background: var(--bg3); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 14px;
+    font-size: 14px; color: var(--text2); line-height: 1.7;
+    white-space: pre-wrap; word-break: break-word;
+    min-height: 60px;
+    font-family: var(--font);
+  }
+
+  /* toast */
+  #toast {
+    position: fixed; bottom: 28px; left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--bg2); border: 1px solid var(--border2);
+    border-radius: 24px; padding: 10px 20px;
+    font-size: 13px; color: var(--text); white-space: nowrap;
+    opacity: 0; transition: all 0.3s; pointer-events: none;
+    z-index: 999; box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  }
+  #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* history */
+  .history-entry {
+    background: var(--bg3); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 12px 14px;
+    margin-bottom: 8px;
+    display: flex; align-items: center; gap: 10px;
+    font-size: 13px;
+  }
+  .history-time { color: var(--text3); font-family: var(--mono); font-size: 11px; min-width: 90px; }
+
+  /* section title */
+  .section-title {
+    font-size: 13px; font-weight: 500; color: var(--text2);
+    margin: 20px 0 10px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .section-title::after {
+    content: ''; flex: 1; height: 1px; background: var(--border);
+  }
+
+  /* interval note */
+  .note { font-size: 12px; color: var(--text3); line-height: 1.6; }
+  .note strong { color: var(--text2); }
+
+  /* empty */
+  .empty { text-align: center; padding: 32px; color: var(--text3); font-size: 14px; }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; } 50% { opacity: 0.4; }
+  }
+
+  /* scrollbar */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+  @media (max-width: 560px) {
+    .app { padding: 20px 14px 40px; }
+    .input-row { flex-direction: column; }
+    .btn-row { flex-direction: column; }
+    .stats-row { gap: 8px; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="header">
+    <div class="header-badge"><span></span>QQ 工具箱</div>
+    <h1>临时会话 &amp; <em>群发助手</em></h1>
+    <p>快速发起 QQ 临时会话，支持批量群发消息提醒</p>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('single')">单个会话</button>
+    <button class="tab" onclick="switchTab('batch')">批量会话</button>
+    <button class="tab" onclick="switchTab('broadcast')">群发消息</button>
+    <button class="tab" onclick="switchTab('history')">发送记录</button>
+  </div>
+
+  <!-- 单个会话 -->
+  <div class="panel active" id="panel-single">
+    <div class="card">
+      <div class="card-label">目标 QQ 号</div>
+      <div class="input-row">
+        <input type="text" id="single-qq" placeholder="输入 QQ 号码" maxlength="12" oninput="this.value=this.value.replace(/[^0-9]/g,'')" onkeydown="if(event.key==='Enter')genSingle()">
+        <button class="btn btn-primary" onclick="genSingle()">生成链接</button>
+      </div>
+    </div>
+
+    <div id="single-result" style="display:none;">
+      <div class="card">
+        <div class="card-label">临时会话链接</div>
+        <div class="link-box" id="single-link"></div>
+        <div class="btn-row">
+          <button class="btn btn-primary" onclick="openSingle()">▶ 在 QQ 中打开</button>
+          <button class="btn btn-ghost" onclick="copySingle()">复制链接</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 批量会话 -->
+  <div class="panel" id="panel-batch">
+    <div class="card">
+      <div class="card-label">批量输入（每行一个 QQ 号）</div>
+      <textarea id="batch-qq" rows="6" placeholder="1234567890&#10;9876543210&#10;5556667777&#10;..."></textarea>
+      <div class="btn-row" style="margin-top:12px;">
+        <button class="btn btn-primary" onclick="genBatch()">生成全部链接</button>
+        <button class="btn btn-ghost" onclick="copyAllBatch()">复制全部</button>
+        <button class="btn btn-ghost btn-sm" onclick="clearBatch()">清空</button>
+      </div>
+    </div>
+    <div id="batch-result-list"></div>
+  </div>
+
+  <!-- 群发消息 -->
+  <div class="panel" id="panel-broadcast">
+    <div class="card">
+      <div class="card-label">QQ 号列表（每行一个）</div>
+      <textarea id="bc-qq-list" rows="5" placeholder="1234567890&#10;9876543210&#10;..."></textarea>
+    </div>
+
+    <div class="card">
+      <div class="card-label">群发消息内容</div>
+      <textarea id="bc-message" rows="4" placeholder="输入要发送的消息内容..." oninput="previewMsg()"></textarea>
+      <div class="section-title">消息预览</div>
+      <div class="msg-preview" id="bc-preview">（消息预览）</div>
+    </div>
+
+    <div class="card">
+      <div class="card-label">发送间隔</div>
+      <div style="display:flex;align-items:center;gap:12px;">
+        <input type="number" id="bc-interval" value="3" min="1" max="60" style="width:90px;">
+        <span style="font-size:14px;color:var(--text2);">秒 / 条</span>
+      </div>
+      <p class="note" style="margin-top:8px;"><strong>说明：</strong>群发会依次为每个 QQ 号打开临时会话链接，请在 QQ 窗口中手动发送消息。间隔时间可避免触发频控。</p>
+    </div>
+
+    <div id="bc-controls">
+      <div class="stats-row" id="bc-stats" style="display:none;">
+        <div class="stat-card">
+          <div class="stat-num" id="stat-total">0</div>
+          <div class="stat-label">总计</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num" style="color:var(--success);" id="stat-done">0</div>
+          <div class="stat-label">已打开</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num" style="color:var(--warn);" id="stat-remain">0</div>
+          <div class="stat-label">剩余</div>
+        </div>
+      </div>
+      <div class="progress-bar" id="bc-progress-wrap" style="display:none;">
+        <div class="progress-fill" id="bc-progress-fill" style="width:0%"></div>
+      </div>
+      <div id="bc-qq-items"></div>
+      <div class="btn-row" style="margin-top:12px;" id="bc-btn-row">
+        <button class="btn btn-primary" onclick="startBroadcast()" id="bc-start-btn">▶ 开始群发</button>
+        <button class="btn btn-danger" onclick="stopBroadcast()" id="bc-stop-btn" style="display:none;">■ 停止</button>
+        <button class="btn btn-ghost" onclick="resetBroadcast()" id="bc-reset-btn" style="display:none;">重置</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 历史记录 -->
+  <div class="panel" id="panel-history">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+      <span style="font-size:14px;color:var(--text2);">最近操作记录</span>
+      <button class="btn btn-ghost btn-sm" onclick="clearHistory()">清空记录</button>
+    </div>
+    <div id="history-list"></div>
+  </div>
+
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ─── state ───────────────────────────────────────────────────────────────────
+let history = JSON.parse(localStorage.getItem('qq_history') || '[]');
+let bcRunning = false;
+let bcTimer = null;
+let bcQueue = [];
+let bcIndex = 0;
+
+// ─── tabs ─────────────────────────────────────────────────────────────────────
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach((t,i) => {
+    const names = ['single','batch','broadcast','history'];
+    t.classList.toggle('active', names[i] === name);
+  });
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('panel-' + name).classList.add('active');
+  if (name === 'history') renderHistory();
+}
+
+// ─── toast ────────────────────────────────────────────────────────────────────
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.classList.add('show');
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => el.classList.remove('show'), 2200);
+}
+
+// ─── history ──────────────────────────────────────────────────────────────────
+function addHistory(type, qq, extra) {
+  history.unshift({ type, qq, extra, time: Date.now() });
+  if (history.length > 200) history.pop();
+  localStorage.setItem('qq_history', JSON.stringify(history));
+}
+function renderHistory() {
+  const el = document.getElementById('history-list');
+  if (!history.length) { el.innerHTML = '<div class="empty">暂无记录</div>'; return; }
+  el.innerHTML = history.map(h => {
+    const d = new Date(h.time);
+    const t = d.toLocaleTimeString('zh-CN', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+    const date = d.toLocaleDateString('zh-CN', { month:'2-digit', day:'2-digit' });
+    const icon = h.type === 'broadcast' ? '📢' : h.type === 'batch' ? '📋' : '💬';
+    return `<div class="history-entry">
+      <span style="font-size:16px;">${icon}</span>
+      <span class="history-time">${date} ${t}</span>
+      <span style="font-family:var(--mono);font-size:13px;color:var(--accent);">${h.qq}</span>
+      <span style="flex:1;font-size:12px;color:var(--text3);">${h.extra || ''}</span>
+    </div>`;
+  }).join('');
+}
+function clearHistory() {
+  history = []; localStorage.removeItem('qq_history');
+  renderHistory(); toast('记录已清空');
+}
+
+// ─── single ───────────────────────────────────────────────────────────────────
+function genSingle() {
+  const qq = document.getElementById('single-qq').value.trim();
+  if (!isValidQQ(qq)) { toast('请输入有效的 QQ 号（5-12位数字）'); return; }
+  const url = makeURL(qq);
+  document.getElementById('single-link').textContent = url;
+  document.getElementById('single-result').style.display = 'block';
+  addHistory('single', qq, '生成链接');
+  window.location.href = url;
+}
+function openSingle() {
+  const link = document.getElementById('single-link').textContent;
+  if (link) window.location.href = link;
+}
+function copySingle() {
+  const link = document.getElementById('single-link').textContent;
+  copyText(link, '链接已复制');
+}
+
+// ─── batch ────────────────────────────────────────────────────────────────────
+function genBatch() {
+  const lines = parsQQList(document.getElementById('batch-qq').value);
+  if (!lines.length) { toast('请输入有效的 QQ 号'); return; }
+  const container = document.getElementById('batch-result-list');
+  container.innerHTML = lines.map(qq => {
+    const url = makeURL(qq);
+    return `<div class="qq-item">
+      <div class="qq-avatar">${qq.slice(-2)}</div>
+      <span class="qq-number">${qq}</span>
+      <div class="qq-actions">
+        <button class="btn btn-ghost btn-sm" onclick="window.location.href='${url}'">打开</button>
+        <button class="btn btn-ghost btn-sm" onclick="copyText('${url}','已复制')">复制</button>
+      </div>
+    </div>`;
+  }).join('');
+  lines.forEach(qq => addHistory('batch', qq, '批量生成'));
+  toast(`已生成 ${lines.length} 条链接`);
+}
+function copyAllBatch() {
+  const lines = parsQQList(document.getElementById('batch-qq').value);
+  if (!lines.length) { toast('请先输入 QQ 号'); return; }
+  const all = lines.map(qq => makeURL(qq)).join('\n');
+  copyText(all, `已复制 ${lines.length} 条链接`);
+}
+function clearBatch() {
+  document.getElementById('batch-qq').value = '';
+  document.getElementById('batch-result-list').innerHTML = '';
+}
+
+// ─── broadcast ───────────────────────────────────────────────────────────────
+function previewMsg() {
+  const msg = document.getElementById('bc-message').value;
+  document.getElementById('bc-preview').textContent = msg || '（消息预览）';
+}
+
+function startBroadcast() {
+  const qqList = parsQQList(document.getElementById('bc-qq-list').value);
+  if (!qqList.length) { toast('请输入至少一个 QQ 号'); return; }
+  const msg = document.getElementById('bc-message').value.trim();
+  const interval = Math.max(1, parseInt(document.getElementById('bc-interval').value) || 3);
+
+  bcQueue = qqList; bcIndex = 0; bcRunning = true;
+
+  // init UI
+  document.getElementById('bc-stats').style.display = 'flex';
+  document.getElementById('bc-progress-wrap').style.display = 'block';
+  document.getElementById('bc-start-btn').style.display = 'none';
+  document.getElementById('bc-stop-btn').style.display = '';
+  document.getElementById('bc-reset-btn').style.display = 'none';
+  document.getElementById('stat-total').textContent = qqList.length;
+
+  // render items
+  document.getElementById('bc-qq-items').innerHTML = `<div class="section-title">发送队列</div>` +
+    qqList.map((qq, i) => `<div class="qq-item" id="bcitem-${i}">
+      <div class="qq-avatar">${qq.slice(-2)}</div>
+      <span class="qq-number">${qq}</span>
+      <span class="qq-status status-pending" id="bcstatus-${i}">等待</span>
+    </div>`).join('');
+
+  sendNext(interval, msg);
+}
+
+function sendNext(interval, msg) {
+  if (!bcRunning || bcIndex >= bcQueue.length) {
+    finishBroadcast(); return;
+  }
+  const qq = bcQueue[bcIndex];
+  const url = makeURL(qq);
+  window.location.href = url;
+
+  document.getElementById(`bcstatus-${bcIndex}`).textContent = '已打开';
+  document.getElementById(`bcstatus-${bcIndex}`).className = 'qq-status status-sent';
+  addHistory('broadcast', qq, msg ? `消息: ${msg.slice(0,20)}` : '群发打开');
+
+  bcIndex++;
+  const done = bcIndex, total = bcQueue.length;
+  document.getElementById('stat-done').textContent = done;
+  document.getElementById('stat-remain').textContent = total - done;
+  document.getElementById('bc-progress-fill').style.width = (done / total * 100) + '%';
+
+  if (bcIndex < bcQueue.length) {
+    bcTimer = setTimeout(() => sendNext(interval, msg), interval * 1000);
+  } else {
+    finishBroadcast();
+  }
+}
+
+function finishBroadcast() {
+  bcRunning = false;
+  document.getElementById('bc-stop-btn').style.display = 'none';
+  document.getElementById('bc-reset-btn').style.display = '';
+  toast(`群发完成，共打开 ${bcIndex} 个会话`);
+}
+
+function stopBroadcast() {
+  bcRunning = false;
+  clearTimeout(bcTimer);
+  // mark remaining as skip
+  for (let i = bcIndex; i < bcQueue.length; i++) {
+    const el = document.getElementById(`bcstatus-${i}`);
+    if (el) { el.textContent = '已跳过'; el.className = 'qq-status status-skip'; }
+  }
+  document.getElementById('bc-stop-btn').style.display = 'none';
+  document.getElementById('bc-reset-btn').style.display = '';
+  toast('已停止群发');
+}
+
+function resetBroadcast() {
+  bcRunning = false; clearTimeout(bcTimer);
+  bcQueue = []; bcIndex = 0;
+  document.getElementById('bc-stats').style.display = 'none';
+  document.getElementById('bc-progress-wrap').style.display = 'none';
+  document.getElementById('bc-qq-items').innerHTML = '';
+  document.getElementById('bc-start-btn').style.display = '';
+  document.getElementById('bc-stop-btn').style.display = 'none';
+  document.getElementById('bc-reset-btn').style.display = 'none';
+}
+
+// ─── utils ────────────────────────────────────────────────────────────────────
+function makeURL(qq) {
+  return `tencent://message/?uin=${qq}&Site=&Menu=yes`;
+}
+function isValidQQ(qq) {
+  return /^\d{5,12}$/.test(qq);
+}
+function parsQQList(text) {
+  return [...new Set(
+    text.split(/[\n,\s]+/).map(s => s.trim()).filter(s => isValidQQ(s))
+  )];
+}
+function copyText(text, msg) {
+  navigator.clipboard.writeText(text).then(() => toast(msg || '已复制')).catch(() => {
+    const ta = document.createElement('textarea');
+    ta.value = text; document.body.appendChild(ta);
+    ta.select(); document.execCommand('copy');
+    document.body.removeChild(ta); toast(msg || '已复制');
+  });
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,992 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>QQ 临时会话工具</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    /* OLED Dark Mode - Professional */
+    --bg: #0a0a0b;
+    --bg2: #111113;
+    --bg3: #18181b;
+    --bg4: #1f1f23;
+    --border: rgba(255,255,255,0.06);
+    --border2: rgba(255,255,255,0.10);
+    --border3: rgba(255,255,255,0.15);
+
+    /* Primary Blue - Tech Professional */
+    --primary: #3b82f6;
+    --primary-hover: #60a5fa;
+    --primary-glow: rgba(59,130,246,0.15);
+    --primary-glow-strong: rgba(59,130,246,0.25);
+
+    /* Semantic Colors */
+    --success: #22c55e;
+    --success-bg: rgba(34,197,94,0.10);
+    --danger: #ef4444;
+    --danger-bg: rgba(239,68,68,0.10);
+    --warn: #f59e0b;
+    --warn-bg: rgba(245,158,11,0.10);
+
+    /* Text */
+    --text: #fafafa;
+    --text2: #a1a1aa;
+    --text3: #52525b;
+
+    /* Spacing & Radius */
+    --radius: 8px;
+    --radius-lg: 12px;
+    --radius-xl: 16px;
+    --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --mono: 'JetBrains Mono', 'SF Mono', monospace;
+
+    /* Shadows */
+    --shadow-sm: 0 1px 2px rgba(0,0,0,0.4);
+    --shadow-md: 0 4px 12px rgba(0,0,0,0.5);
+    --shadow-lg: 0 8px 24px rgba(0,0,0,0.6);
+    --shadow-glow: 0 0 20px rgba(59,130,246,0.3);
+  }
+
+  /* Light Mode */
+  [data-theme="light"] {
+    --bg: #ffffff;
+    --bg2: #f8f9fa;
+    --bg3: #f1f3f5;
+    --bg4: #e9ecef;
+    --border: rgba(0,0,0,0.06);
+    --border2: rgba(0,0,0,0.10);
+    --border3: rgba(0,0,0,0.15);
+    --text: #1a1a2e;
+    --text2: #6b7280;
+    --text3: #71717a;
+    --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+    --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+    --shadow-lg: 0 8px 24px rgba(0,0,0,0.12);
+    --shadow-glow: 0 0 20px rgba(59,130,246,0.15);
+    --primary-glow: rgba(59,130,246,0.08);
+    --primary-glow-strong: rgba(59,130,246,0.12);
+    --success-bg: rgba(34,197,94,0.08);
+    --danger-bg: rgba(239,68,68,0.08);
+    --warn-bg: rgba(245,158,11,0.08);
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 0;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    transition: background-color 0.2s ease, color 0.2s ease;
+  }
+
+  /* Layout */
+  .app {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 32px 20px 48px;
+  }
+
+  /* Header */
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 32px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .header-content {
+    flex: 1;
+  }
+
+  /* Theme Toggle */
+  .theme-toggle {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    background: var(--bg3);
+    border: 1px solid var(--border2);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+    margin-left: 16px;
+  }
+
+  .theme-toggle:hover {
+    background: var(--bg4);
+    border-color: var(--border3);
+    transform: scale(1.05);
+  }
+
+  .theme-toggle:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+  }
+
+  .theme-toggle svg {
+    width: 18px;
+    height: 18px;
+    color: var(--text2);
+    transition: color 0.2s ease;
+  }
+
+  .theme-toggle:hover svg {
+    color: var(--text);
+  }
+
+  .icon-moon { display: none; }
+  [data-theme="light"] .icon-sun { display: none; }
+  [data-theme="light"] .icon-moon { display: block; }
+
+  .header-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--primary-glow);
+    border: 1px solid rgba(59,130,246,0.2);
+    border-radius: 100px;
+    padding: 6px 14px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--primary);
+    letter-spacing: 0.02em;
+    margin-bottom: 16px;
+  }
+
+  .header-badge .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--primary);
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  .header-badge .version {
+    font-size: 11px;
+    opacity: 0.7;
+    font-style: normal;
+    margin-left: 4px;
+  }
+
+  .header h1 {
+    font-size: 24px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    line-height: 1.3;
+    color: var(--text);
+  }
+
+  .header h1 em {
+    font-style: normal;
+    color: var(--primary);
+  }
+
+  .header p {
+    font-size: 14px;
+    color: var(--text2);
+    margin-top: 8px;
+  }
+
+  /* Panels */
+
+  /* Card */
+  .card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 20px;
+    margin-bottom: 16px;
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+  }
+
+  .card:hover {
+    border-color: var(--border2);
+  }
+
+  .card-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text3);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+
+  /* Inputs */
+  .input-row { display: flex; gap: 10px; }
+  .input-row input { flex: 1; }
+
+  input[type=text], input[type=number], textarea, select {
+    width: 100%;
+    background: var(--bg3);
+    border: 1px solid var(--border2);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-family: var(--font);
+    font-size: 14px;
+    padding: 12px 14px;
+    outline: none;
+    transition: all 0.2s ease;
+  }
+
+  input:focus, textarea:focus, select:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px var(--primary-glow);
+  }
+
+  input::placeholder, textarea::placeholder {
+    color: var(--text3);
+  }
+
+  textarea {
+    resize: vertical;
+    line-height: 1.6;
+    min-height: 120px;
+  }
+
+  select option { background: var(--bg3); }
+
+  /* Buttons */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px 20px;
+    border-radius: var(--radius);
+    font-family: var(--font);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    border: none;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+  }
+
+  .btn-primary {
+    background: var(--primary);
+    color: #fff;
+  }
+
+  .btn-primary:hover {
+    background: var(--primary-hover);
+    transform: translateY(-1px);
+  }
+
+  .btn-primary:active {
+    transform: translateY(0) scale(0.98);
+  }
+
+  .btn-action {
+    box-shadow: var(--shadow-md), var(--shadow-glow);
+    font-weight: 600;
+  }
+
+  .btn-action:hover {
+    box-shadow: var(--shadow-lg), 0 0 30px rgba(59,130,246,0.4);
+    transform: translateY(-2px);
+  }
+
+  .btn-action:active {
+    transform: translateY(0) scale(0.97);
+    box-shadow: var(--shadow-sm), var(--shadow-glow);
+  }
+
+  .btn-ghost {
+    background: var(--bg3);
+    color: var(--text2);
+    border: 1px solid var(--border2);
+  }
+
+  .btn-ghost:hover {
+    color: var(--text);
+    border-color: var(--border3);
+    background: var(--bg4);
+  }
+
+  .btn-danger {
+    background: var(--danger-bg);
+    color: var(--danger);
+    border: 1px solid rgba(239,68,68,0.2);
+  }
+
+  .btn-danger:hover {
+    background: rgba(239,68,68,0.15);
+  }
+
+  .btn-success {
+    background: var(--success-bg);
+    color: var(--success);
+    border: 1px solid rgba(34,197,94,0.2);
+  }
+
+  .btn-warn {
+    background: var(--warn-bg);
+    color: var(--warn);
+    border: 1px solid rgba(245,158,11,0.2);
+  }
+
+  .btn-sm {
+    padding: 8px 14px;
+    font-size: 12px;
+  }
+
+  .btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none !important;
+  }
+
+  .btn-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 8px;
+  }
+
+  /* QQ List */
+  .qq-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .qq-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 16px;
+    transition: all 0.2s ease;
+  }
+
+  .qq-item:hover {
+    border-color: var(--border3);
+    background: var(--bg4);
+  }
+
+  .qq-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    background: var(--primary-glow);
+    border: 1px solid rgba(59,130,246,0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--primary);
+    flex-shrink: 0;
+  }
+
+  .qq-number {
+    font-family: var(--mono);
+    font-size: 14px;
+    color: var(--text);
+    flex: 1;
+  }
+
+  .qq-actions {
+    display: flex;
+    gap: 6px;
+  }
+
+  .qq-status {
+    font-size: 11px;
+    padding: 4px 10px;
+    border-radius: 100px;
+    font-weight: 500;
+  }
+
+  .status-pending {
+    background: var(--warn-bg);
+    color: var(--warn);
+    border: 1px solid rgba(245,158,11,0.2);
+  }
+
+  .status-sent {
+    background: var(--success-bg);
+    color: var(--success);
+    border: 1px solid rgba(34,197,94,0.2);
+  }
+
+  .status-skip {
+    background: rgba(255,255,255,0.03);
+    color: var(--text3);
+    border: 1px solid var(--border);
+  }
+
+  [data-theme="light"] .status-skip {
+    background: rgba(0,0,0,0.03);
+    border-color: rgba(0,0,0,0.08);
+  }
+
+  .status-paused {
+    background: var(--primary-glow);
+    color: var(--primary);
+    border: 1px solid rgba(59,130,246,0.2);
+  }
+
+  /* Progress */
+  .progress-bar {
+    width: 100%;
+    height: 4px;
+    background: var(--bg3);
+    border-radius: 2px;
+    overflow: hidden;
+    margin: 16px 0;
+  }
+
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--primary), var(--primary-hover));
+    border-radius: 2px;
+    transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* Stats */
+  .stats-row {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin: 16px 0;
+  }
+
+  .stat-card {
+    flex: 1;
+    min-width: 80px;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    text-align: center;
+  }
+
+  .stat-num {
+    font-size: 24px;
+    font-weight: 700;
+    font-family: var(--mono);
+    line-height: 1;
+  }
+
+  .stat-label {
+    font-size: 11px;
+    color: var(--text3);
+    margin-top: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+
+  /* Toast */
+  #toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--bg4);
+    border: 1px solid var(--border2);
+    border-radius: 100px;
+    padding: 12px 24px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text);
+    white-space: nowrap;
+    opacity: 0;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    pointer-events: none;
+    z-index: 999;
+    box-shadow: var(--shadow-lg);
+  }
+
+  #toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  /* Section Title */
+  .section-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text3);
+    margin: 20px 0 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .section-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* Note */
+  .note {
+    font-size: 13px;
+    color: var(--text3);
+    line-height: 1.7;
+  }
+
+  .note strong {
+    color: var(--text2);
+    font-weight: 500;
+  }
+
+  /* Modal */
+  .modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.8);
+    backdrop-filter: blur(8px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.2s ease;
+  }
+
+  .modal-overlay.show {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  .modal {
+    background: var(--bg2);
+    border: 1px solid var(--border2);
+    border-radius: var(--radius-xl);
+    padding: 28px;
+    max-width: 400px;
+    width: 90%;
+    box-shadow: var(--shadow-lg);
+    transform: scale(0.95);
+    transition: transform 0.2s ease;
+  }
+
+  .modal-overlay.show .modal {
+    transform: scale(1);
+  }
+
+  .modal-title {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 16px;
+    text-align: center;
+  }
+
+  .modal-content {
+    font-size: 14px;
+    color: var(--text2);
+    line-height: 1.6;
+  }
+
+  .modal-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    margin-top: 24px;
+  }
+
+  .preview-list {
+    max-height: 200px;
+    overflow-y: auto;
+    margin: 12px 0;
+  }
+
+  .preview-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 0;
+    font-size: 13px;
+  }
+
+  .preview-item span {
+    font-family: var(--mono);
+    color: var(--primary);
+  }
+
+  /* Animations */
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb {
+    background: var(--border2);
+    border-radius: 3px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--border3);
+  }
+
+  /* Reduced Motion */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+
+  /* Responsive */
+  @media (max-width: 560px) {
+    .app { padding: 20px 16px 40px; }
+    .input-row { flex-direction: column; }
+    .btn-row { flex-direction: column; }
+    .stats-row { gap: 8px; }
+    .header h1 { font-size: 20px; }
+    .modal { padding: 20px; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="header">
+    <div class="header-content">
+      <div class="header-badge"><i class="dot"></i>QQ 工具箱 <em class="version">v1.3.0</em></div>
+      <h1><em>群发助手</em></h1>
+      <p>批量打开 QQ 临时会话窗口，支持分组发送</p>
+    </div>
+    <button class="theme-toggle" onclick="toggleTheme()" title="切换主题" aria-label="切换主题">
+      <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="5"/>
+        <line x1="12" y1="1" x2="12" y2="3"/>
+        <line x1="12" y1="21" x2="12" y2="23"/>
+        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+        <line x1="1" y1="12" x2="3" y2="12"/>
+        <line x1="21" y1="12" x2="23" y2="12"/>
+        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+      </svg>
+      <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+      </svg>
+    </button>
+  </div>
+
+  <!-- 群发消息 -->
+  <div id="panel-broadcast">
+    <div class="card">
+      <div class="card-label">QQ 号列表（每行一个）</div>
+      <textarea id="bc-qq-list" rows="8" placeholder="1234567890&#10;9876543210&#10;..."></textarea>
+    </div>
+
+    <div class="card">
+      <div class="card-label">群发设置</div>
+      <div style="display:flex;flex-wrap:wrap;gap:16px;">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:14px;color:var(--text2);">每批发送数量</span>
+          <input type="number" id="bc-batch-size" value="10" min="1" max="100" style="width:80px;">
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:14px;color:var(--text2);">弹窗停留时间</span>
+          <input type="number" id="bc-stay-time" value="20" min="1" max="120" style="width:80px;">
+          <span style="font-size:14px;color:var(--text3);">秒</span>
+        </div>
+      </div>
+      <p class="note" style="margin-top:12px;"><strong>说明：</strong>群发会同时打开多个QQ临时会话，请在QQ中手动发送消息。弹窗将在设定时间后自动关闭。</p>
+    </div>
+
+    <div class="btn-row" style="gap:8px;">
+      <button class="btn btn-primary btn-action" onclick="startBroadcast()" id="bc-start-btn" style="width:100%;">▶ 开始群发</button>
+      <button class="btn btn-danger" onclick="closeAllOpenedWindows()" id="bc-close-btn" style="display:none;width:100%;">✕ 关闭所有窗口</button>
+      <button class="btn btn-ghost" onclick="resetBroadcast()" id="bc-reset-btn" style="display:none;width:100%;">重置</button>
+    </div>
+
+    <div id="bc-controls" style="display:flex;flex-direction:column;min-height:200px;">
+      <div class="stats-row" id="bc-stats" style="display:none;">
+        <div class="stat-card">
+          <div class="stat-num" id="stat-total">0</div>
+          <div class="stat-label">总计</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num" style="color:var(--success);" id="stat-done">0</div>
+          <div class="stat-label">已打开</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num" style="color:var(--warn);" id="stat-remain">0</div>
+          <div class="stat-label">剩余</div>
+        </div>
+      </div>
+      <div class="progress-bar" id="bc-progress-wrap" style="display:none;">
+        <div class="progress-fill" id="bc-progress-fill" style="width:0%"></div>
+      </div>
+      <div id="bc-qq-items" style="flex:1;overflow-y:auto;margin-bottom:12px;"></div>
+    </div>
+  </div>
+
+  <!-- 预览确认弹窗 -->
+  <div class="modal-overlay" id="preview-modal">
+    <div class="modal">
+      <div class="modal-title">确认群发</div>
+      <div class="modal-content">
+        <p id="preview-msg" style="font-size:15px;text-align:center;padding:16px 0;">要发送总共 0 个 QQ 中的 0 个，确定吗？</p>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="closePreviewModal()">取消</button>
+        <button class="btn btn-primary btn-action" onclick="confirmBroadcast()">确定</button>
+      </div>
+    </div>
+  </div>
+
+  </div>
+
+<div id="toast"></div>
+
+<script>
+// ─── theme ─────────────────────────────────────────────────────────────────────
+function initTheme() {
+  const saved = localStorage.getItem('qq_theme');
+  if (saved === 'light') {
+    document.documentElement.setAttribute('data-theme', 'light');
+  }
+}
+
+function toggleTheme() {
+  const html = document.documentElement;
+  const isLight = html.getAttribute('data-theme') === 'light';
+  if (isLight) {
+    html.removeAttribute('data-theme');
+    localStorage.removeItem('qq_theme');
+  } else {
+    html.setAttribute('data-theme', 'light');
+    localStorage.setItem('qq_theme', 'light');
+  }
+}
+
+initTheme();
+
+// ─── state ───────────────────────────────────────────────────────────────────
+let bcQueue = [];
+let bcIndex = 0;
+let bcBatchSize = parseInt(localStorage.getItem('bc_batch_size')) || 10;
+let bcStayTime = parseInt(localStorage.getItem('bc_stay_time')) || 20;
+let openedWindows = []; // 保存已打开的窗口引用
+
+// ─── toast ────────────────────────────────────────────────────────────────────
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.classList.add('show');
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => el.classList.remove('show'), 2200);
+}
+
+// ─── broadcast ───────────────────────────────────────────────────────────────
+function startBroadcast() {
+  const qqList = parsQQList(document.getElementById('bc-qq-list').value);
+  if (!qqList.length) { toast('请输入至少一个 QQ 号'); return; }
+
+  bcBatchSize = Math.max(1, parseInt(document.getElementById('bc-batch-size').value) || 10);
+  bcStayTime = Math.max(1, parseInt(document.getElementById('bc-stay-time').value) || 20);
+
+  // 保存设置到 localStorage
+  localStorage.setItem('bc_batch_size', bcBatchSize);
+  localStorage.setItem('bc_stay_time', bcStayTime);
+
+  // 如果是首次或重置后，初始化队列
+  if (bcIndex === 0 || bcIndex >= bcQueue.length) {
+    bcQueue = qqList;
+    bcIndex = 0;
+  }
+
+  showConfirmModal();
+}
+
+function showConfirmModal() {
+  const sent = bcIndex;
+  const thisBatch = Math.min(bcBatchSize, bcQueue.length - bcIndex);
+  const remaining = bcQueue.length - bcIndex - thisBatch;
+
+  // 显示确认弹窗
+  document.getElementById('preview-msg').textContent = '已发送 ' + sent + ' 个，此次发送 ' + thisBatch + ' 个，还剩 ' + remaining + ' 个';
+  document.getElementById('preview-modal').classList.add('show');
+
+  // 添加回车键监听
+  document.addEventListener('keydown', handleModalEnter);
+}
+
+function handleModalEnter(e) {
+  if (e.key === 'Enter' && document.getElementById('preview-modal').classList.contains('show')) {
+    confirmBroadcast();
+  }
+}
+
+function closePreviewModal() {
+  document.getElementById('preview-modal').classList.remove('show');
+  // 移除回车键监听
+  document.removeEventListener('keydown', handleModalEnter);
+}
+
+function confirmBroadcast() {
+  closePreviewModal();
+
+  bcBatchSize = Math.max(1, parseInt(document.getElementById('bc-batch-size').value) || 10);
+  bcStayTime = Math.max(1, parseInt(document.getElementById('bc-stay-time').value) || 20);
+
+  // 计算本批次
+  const remaining = bcQueue.length - bcIndex;
+  const thisBatch = Math.min(bcBatchSize, remaining);
+
+  // init UI
+  document.getElementById('bc-stats').style.display = 'flex';
+  document.getElementById('bc-progress-wrap').style.display = 'block';
+  document.getElementById('bc-start-btn').textContent = '▶ 继续发送';
+  document.getElementById('bc-reset-btn').style.display = '';
+  document.getElementById('stat-total').textContent = bcQueue.length;
+  document.getElementById('stat-done').textContent = bcIndex;
+  document.getElementById('stat-remain').textContent = remaining;
+  document.getElementById('bc-progress-fill').style.width = (bcIndex / bcQueue.length * 100) + '%';
+
+  // render items if first time
+  if (bcIndex === 0) {
+    let itemsHtml = '<div class="section-title">发送队列</div>';
+    for (let i = 0; i < bcQueue.length; i++) {
+      const qq = bcQueue[i];
+      itemsHtml += '<div class="qq-item" id="bcitem-' + i + '">' +
+        '<div class="qq-avatar">' + qq.slice(-2) + '</div>' +
+        '<span class="qq-number">' + qq + '</span>' +
+        '<span class="qq-status status-pending" id="bcstatus-' + i + '">等待</span>' +
+      '</div>';
+    }
+    document.getElementById('bc-qq-items').innerHTML = itemsHtml;
+  }
+
+  // 发送本批次
+  openBatch(thisBatch);
+}
+
+function openBatch(count) {
+  const startIdx = bcIndex;
+  const endIdx = Math.min(bcIndex + count, bcQueue.length);
+
+  // 显示关闭按钮
+  document.getElementById('bc-close-btn').style.display = '';
+
+  for (let i = startIdx; i < endIdx; i++) {
+    (function(idx) {
+      const qq = bcQueue[idx];
+      const url = makeURL(qq);
+      const win = window.open(url, '_blank');
+      if (win) {
+        openedWindows.push(win);
+        setTimeout(function() {
+          try { win.close(); } catch(e) {}
+        }, bcStayTime * 1000);
+      }
+
+      const statusEl = document.getElementById('bcstatus-' + idx);
+      if (statusEl) {
+        statusEl.textContent = '已打开';
+        statusEl.className = 'qq-status status-sent';
+      }
+    })(i);
+  }
+
+  bcIndex = endIdx;
+  const done = bcIndex;
+  const total = bcQueue.length;
+  document.getElementById('stat-done').textContent = done;
+  document.getElementById('stat-remain').textContent = total - done;
+  document.getElementById('bc-progress-fill').style.width = (done / total * 100) + '%';
+
+  // 从输入框中删除已发送的QQ
+  const sentQQs = bcQueue.slice(startIdx, endIdx);
+  const currentList = document.getElementById('bc-qq-list').value;
+  const lines = currentList.split('\n').map(s => s.trim()).filter(s => s);
+  const remainingLines = lines.filter(line => !sentQQs.includes(line));
+  document.getElementById('bc-qq-list').value = remainingLines.join('\n');
+
+  if (bcIndex >= bcQueue.length) {
+    document.getElementById('bc-start-btn').textContent = '✓ 全部完成';
+    document.getElementById('bc-start-btn').disabled = true;
+    toast('群发完成，共打开 ' + total + ' 个会话');
+  } else {
+    toast('已发送 ' + done + '/' + total + '，点击继续发送下一批');
+  }
+}
+
+function closeAllOpenedWindows() {
+  let closedCount = 0;
+  openedWindows.forEach(function(win) {
+    try {
+      if (win && !win.closed) {
+        win.close();
+        closedCount++;
+      }
+    } catch(e) {}
+  });
+  openedWindows = [];
+  toast('已关闭 ' + closedCount + ' 个窗口');
+}
+
+function resetBroadcast() {
+  bcRunning = false;
+  bcQueue = [];
+  bcIndex = 0;
+  document.getElementById('bc-stats').style.display = 'none';
+  document.getElementById('bc-progress-wrap').style.display = 'none';
+  document.getElementById('bc-qq-items').innerHTML = '';
+  document.getElementById('bc-start-btn').textContent = '▶ 开始群发';
+  document.getElementById('bc-start-btn').disabled = false;
+  document.getElementById('bc-start-btn').style.display = '';
+  document.getElementById('bc-reset-btn').style.display = 'none';
+}
+
+// ─── utils ────────────────────────────────────────────────────────────────────
+function makeURL(qq) {
+  return 'https://wpa.qq.com/msgrd?v=3&uin=' + qq + '&site=qq&menu=yes';
+}
+function isValidQQ(qq) {
+  return /^\d{5,12}$/.test(qq);
+}
+function parsQQList(text) {
+  return [...new Set(
+    text.split(/[\n,\s]+/).map(s => s.trim()).filter(s => isValidQQ(s))
+  )];
+}
+function copyText(text, msg) {
+  navigator.clipboard.writeText(text).then(() => toast(msg || '已复制')).catch(() => {
+    const ta = document.createElement('textarea');
+    ta.value = text; document.body.appendChild(ta);
+    ta.select(); document.execCommand('copy');
+    document.body.removeChild(ta); toast(msg || '已复制');
+  });
+}
+
+// 初始化输入框的值
+document.getElementById('bc-batch-size').value = bcBatchSize;
+document.getElementById('bc-stay-time').value = bcStayTime;
+</script>
+</body>
+</html>

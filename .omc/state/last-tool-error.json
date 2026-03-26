@@ -1,0 +1,7 @@
+{
+  "tool_name": "mcp__plugin_playwright_playwright__browser_navigate",
+  "tool_input_preview": "{\"url\":\"file:///E:/WorkPlace/7_AI_APP/UniAddQQ/qq-session-tool.html\"}",
+  "error": "### Error\nError: Access to \"file:\" URL is blocked. Allowed protocols: http:, https:, about:, data:. Attempted URL: file:///E:/WorkPlace/7_AI_APP/UniAddQQ/qq-session-tool.html",
+  "timestamp": "2026-03-25T12:19:11.249Z",
+  "retry_count": 1
+}

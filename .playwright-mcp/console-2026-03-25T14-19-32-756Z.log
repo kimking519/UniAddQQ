@@ -1,0 +1,2 @@
+[     319ms] [ERROR] host 'wpa.qq.com' is not in qidian-monitor defined, please add host config in qidian-monitor first @ https://bqq.gtimg.com/qidian-monitor/qidianMonitor.umd.min.js:0
+[    1053ms] [ERROR] 459003 - 未开通临时会话 - /v1/b2b/wpa/getWpaUrl @ https://bqq.gtimg.com/b2b-qq/wpa-link/index.js?_t=1736248644603:9
