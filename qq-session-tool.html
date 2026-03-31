@@ -719,7 +719,10 @@
     </div>
 
     <div class="btn-row" style="gap:8px;">
-      <button class="btn btn-primary btn-action" onclick="startBroadcast()" id="bc-start-btn" style="width:100%;">▶ 开始群发</button>
+      <button class="btn btn-primary btn-action" onclick="startBroadcast('session')" id="bc-start-btn" style="flex:1;">▶ 打开临时会话</button>
+      <button class="btn btn-ghost" onclick="startBroadcast('add')" id="bc-add-btn" style="flex:1;">+ 添加好友</button>
+    </div>
+    <div class="btn-row" style="gap:8px;margin-top:8px;">
       <button class="btn btn-danger" onclick="closeAllOpenedWindows()" id="bc-close-btn" style="display:none;width:100%;">✕ 关闭所有窗口</button>
       <button class="btn btn-ghost" onclick="resetBroadcast()" id="bc-reset-btn" style="display:none;width:100%;">重置</button>
     </div>
@@ -793,6 +796,7 @@ let bcIndex = 0;
 let bcBatchSize = parseInt(localStorage.getItem('bc_batch_size')) || 10;
 let bcStayTime = parseInt(localStorage.getItem('bc_stay_time')) || 20;
 let openedWindows = []; // 保存已打开的窗口引用
+let bcMode = 'session'; // 'session' 或 'add'
 
 // ─── toast ────────────────────────────────────────────────────────────────────
 function toast(msg) {
@@ -803,7 +807,8 @@ function toast(msg) {
 }
 
 // ─── broadcast ───────────────────────────────────────────────────────────────
-function startBroadcast() {
+function startBroadcast(mode) {
+  bcMode = mode || 'session';
   const qqList = parsQQList(document.getElementById('bc-qq-list').value);
   if (!qqList.length) { toast('请输入至少一个 QQ 号'); return; }
 
@@ -828,8 +833,9 @@ function showConfirmModal() {
   const thisBatch = Math.min(bcBatchSize, bcQueue.length - bcIndex);
   const remaining = bcQueue.length - bcIndex - thisBatch;
 
+  const actionText = bcMode === 'add' ? '添加好友' : '打开临时会话';
   // 显示确认弹窗
-  document.getElementById('preview-msg').textContent = '已发送 ' + sent + ' 个，此次发送 ' + thisBatch + ' 个，还剩 ' + remaining + ' 个';
+  document.getElementById('preview-msg').textContent = '已处理 ' + sent + ' 个，此次' + actionText + ' ' + thisBatch + ' 个，还剩 ' + remaining + ' 个';
   document.getElementById('preview-modal').classList.add('show');
 
   // 添加回车键监听
@@ -858,10 +864,13 @@ function confirmBroadcast() {
   const remaining = bcQueue.length - bcIndex;
   const thisBatch = Math.min(bcBatchSize, remaining);
 
+  const actionText = bcMode === 'add' ? '添加好友' : '打开会话';
+
   // init UI
   document.getElementById('bc-stats').style.display = 'flex';
   document.getElementById('bc-progress-wrap').style.display = 'block';
-  document.getElementById('bc-start-btn').textContent = '▶ 继续发送';
+  document.getElementById('bc-start-btn').textContent = '▶ 继续打开会话';
+  document.getElementById('bc-add-btn').textContent = '+ 继续添加好友';
   document.getElementById('bc-reset-btn').style.display = '';
   document.getElementById('stat-total').textContent = bcQueue.length;
   document.getElementById('stat-done').textContent = bcIndex;
@@ -870,7 +879,7 @@ function confirmBroadcast() {
 
   // render items if first time
   if (bcIndex === 0) {
-    let itemsHtml = '<div class="section-title">发送队列</div>';
+    let itemsHtml = '<div class="section-title">处理队列</div>';
     for (let i = 0; i < bcQueue.length; i++) {
       const qq = bcQueue[i];
       itemsHtml += '<div class="qq-item" id="bcitem-' + i + '">' +
@@ -896,18 +905,27 @@ function openBatch(count) {
   for (let i = startIdx; i < endIdx; i++) {
     (function(idx) {
       const qq = bcQueue[idx];
-      const url = makeURL(qq);
-      const win = window.open(url, '_blank');
+      const url = makeURL(qq, bcMode);
+
+      // 使用弹窗模式（独立窗口而非标签页）
+      const win = window.open(url, 'qq_' + qq, 'width=500,height=400,left=' + (100 + (idx % 5) * 50) + ',top=' + (100 + (idx % 5) * 50));
+
       if (win) {
-        openedWindows.push(win);
+        openedWindows.push({ win: win, qq: qq });
+
+        // 定时关闭弹窗
         setTimeout(function() {
-          try { win.close(); } catch(e) {}
+          try {
+            if (win && !win.closed) {
+              win.close();
+            }
+          } catch(e) {}
         }, bcStayTime * 1000);
       }
 
       const statusEl = document.getElementById('bcstatus-' + idx);
       if (statusEl) {
-        statusEl.textContent = '已打开';
+        statusEl.textContent = bcMode === 'add' ? '添加好友' : '已打开';
         statusEl.className = 'qq-status status-sent';
       }
     })(i);
@@ -930,18 +948,19 @@ function openBatch(count) {
   if (bcIndex >= bcQueue.length) {
     document.getElementById('bc-start-btn').textContent = '✓ 全部完成';
     document.getElementById('bc-start-btn').disabled = true;
-    toast('群发完成，共打开 ' + total + ' 个会话');
+    document.getElementById('bc-add-btn').disabled = true;
+    toast('完成，共处理 ' + total + ' 个');
   } else {
-    toast('已发送 ' + done + '/' + total + '，点击继续发送下一批');
+    toast('已处理 ' + done + '/' + total + '，点击继续下一批');
   }
 }
 
 function closeAllOpenedWindows() {
   let closedCount = 0;
-  openedWindows.forEach(function(win) {
+  openedWindows.forEach(function(item) {
     try {
-      if (win && !win.closed) {
-        win.close();
+      if (item.win && !item.win.closed) {
+        item.win.close();
         closedCount++;
       }
     } catch(e) {}
@@ -954,18 +973,30 @@ function resetBroadcast() {
   bcRunning = false;
   bcQueue = [];
   bcIndex = 0;
+  bcMode = 'session';
+  openedWindows = [];
   document.getElementById('bc-stats').style.display = 'none';
   document.getElementById('bc-progress-wrap').style.display = 'none';
   document.getElementById('bc-qq-items').innerHTML = '';
-  document.getElementById('bc-start-btn').textContent = '▶ 开始群发';
+  document.getElementById('bc-start-btn').textContent = '▶ 打开临时会话';
   document.getElementById('bc-start-btn').disabled = false;
   document.getElementById('bc-start-btn').style.display = '';
+  document.getElementById('bc-add-btn').textContent = '+ 添加好友';
+  document.getElementById('bc-add-btn').disabled = false;
   document.getElementById('bc-reset-btn').style.display = 'none';
 }
 
 // ─── utils ────────────────────────────────────────────────────────────────────
-function makeURL(qq) {
-  return 'https://wpa.qq.com/msgrd?v=3&uin=' + qq + '&site=qq&menu=yes';
+function makeURL(qq, mode) {
+  mode = mode || 'session';
+
+  if (mode === 'add') {
+    // 添加好友链接 - QQ官方添加好友页面
+    return 'https://wp.qq.com/wpa/qunwpa#id=3&uin=' + qq;
+  } else {
+    // 临时会话链接 - 使用网页版 wpa.qq.com
+    return 'https://wpa.qq.com/msgrd?v=3&uin=' + qq + '&site=qq&menu=yes';
+  }
 }
 function isValidQQ(qq) {
   return /^\d{5,12}$/.test(qq);
