@@ -445,6 +445,80 @@
     border: 1px solid rgba(59,130,246,0.2);
   }
 
+  .status-failed {
+    background: var(--danger-bg);
+    color: var(--danger);
+    border: 1px solid rgba(239,68,68,0.2);
+  }
+
+  /* Failed List */
+  .failed-list-card {
+    background: var(--danger-bg);
+    border: 1px solid rgba(239,68,68,0.15);
+    border-radius: var(--radius-lg);
+    padding: 16px;
+    margin-top: 16px;
+  }
+
+  .failed-list-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+
+  .failed-list-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--danger);
+  }
+
+  .failed-list-count {
+    font-size: 12px;
+    color: var(--text3);
+  }
+
+  .failed-qq-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    min-height: 40px;
+  }
+
+  .failed-qq-item {
+    font-family: var(--mono);
+    font-size: 13px;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 6px 10px;
+    color: var(--text);
+  }
+
+  .failed-empty {
+    color: var(--text3);
+    font-size: 13px;
+    padding: 8px 0;
+  }
+
+  /* Checkbox */
+  .checkbox-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .checkbox-row input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--primary);
+  }
+
+  .checkbox-label {
+    font-size: 14px;
+    color: var(--text2);
+  }
+
   /* Progress */
   .progress-bar {
     width: 100%;
@@ -673,7 +747,7 @@
 
   <div class="header">
     <div class="header-content">
-      <div class="header-badge"><i class="dot"></i>QQ 工具箱 <em class="version">v1.3.1</em></div>
+      <div class="header-badge"><i class="dot"></i>QQ 工具箱 <em class="version">v1.4.0</em></div>
       <h1><em>群发助手</em></h1>
       <p>批量打开 QQ 临时会话窗口，支持分组发送</p>
     </div>
@@ -714,8 +788,12 @@
           <input type="number" id="bc-stay-time" value="20" min="1" max="120" style="width:80px;">
           <span style="font-size:14px;color:var(--text3);">秒</span>
         </div>
+        <div class="checkbox-row">
+          <input type="checkbox" id="bc-auto-close" checked>
+          <label for="bc-auto-close" class="checkbox-label">自动关闭窗口</label>
+        </div>
       </div>
-      <p class="note" style="margin-top:12px;"><strong>说明：</strong>群发会同时打开多个QQ临时会话，请在QQ中手动发送消息。弹窗将在设定时间后自动关闭。</p>
+      <p class="note" style="margin-top:12px;"><strong>说明：</strong>群发会依次打开QQ临时会话窗口。关闭"自动关闭窗口"后，可手动关闭成功窗口，再点击"收集失败"提取无法发起会话的QQ。</p>
     </div>
 
     <div class="btn-row" style="gap:8px;">
@@ -724,7 +802,23 @@
     </div>
     <div class="btn-row" style="gap:8px;margin-top:8px;">
       <button class="btn btn-danger" onclick="closeAllOpenedWindows()" id="bc-close-btn" style="display:none;width:100%;">✕ 关闭所有窗口</button>
+      <button class="btn btn-warn" onclick="collectFailedQQs()" id="bc-collect-btn" style="display:none;width:100%;">收集失败</button>
       <button class="btn btn-ghost" onclick="resetBroadcast()" id="bc-reset-btn" style="display:none;width:100%;">重置</button>
+    </div>
+
+    <!-- 失败列表区域 -->
+    <div class="failed-list-card" id="failed-list-card" style="display:none;">
+      <div class="failed-list-header">
+        <span class="failed-list-title">无法发起会话的 QQ</span>
+        <span class="failed-list-count" id="failed-count">0 个</span>
+      </div>
+      <div class="failed-qq-list" id="failed-qq-list">
+        <span class="failed-empty">暂无失败的 QQ</span>
+      </div>
+      <div class="btn-row" style="margin-top:12px;">
+        <button class="btn btn-ghost btn-sm" onclick="copyFailedQQs()" id="copy-failed-btn" style="flex:1;">复制全部</button>
+        <button class="btn btn-danger btn-sm" onclick="clearFailedList()" id="clear-failed-btn" style="flex:1;">清空列表</button>
+      </div>
     </div>
 
     <div id="bc-controls" style="display:flex;flex-direction:column;min-height:200px;">
@@ -797,6 +891,8 @@ let bcBatchSize = parseInt(localStorage.getItem('bc_batch_size')) || 10;
 let bcStayTime = parseInt(localStorage.getItem('bc_stay_time')) || 20;
 let openedWindows = []; // 保存已打开的窗口引用
 let bcMode = 'session'; // 'session' 或 'add'
+let failedQQs = []; // 失败的 QQ 列表
+let autoCloseEnabled = localStorage.getItem('bc_auto_close') !== 'false'; // 默认开启
 
 // ─── toast ────────────────────────────────────────────────────────────────────
 function toast(msg) {
@@ -872,6 +968,7 @@ function confirmBroadcast() {
   document.getElementById('bc-start-btn').textContent = '▶ 继续打开会话';
   document.getElementById('bc-add-btn').textContent = '+ 继续添加好友';
   document.getElementById('bc-reset-btn').style.display = '';
+  document.getElementById('bc-collect-btn').style.display = '';
   document.getElementById('stat-total').textContent = bcQueue.length;
   document.getElementById('stat-done').textContent = bcIndex;
   document.getElementById('stat-remain').textContent = remaining;
@@ -902,18 +999,49 @@ function openBatch(count) {
   // 显示关闭按钮
   document.getElementById('bc-close-btn').style.display = '';
 
-  for (let i = startIdx; i < endIdx; i++) {
-    (function(idx) {
-      const qq = bcQueue[idx];
-      const url = makeURL(qq, bcMode);
+  // 延迟依次打开窗口，避免浏览器拦截
+  const delay = 1000; // 每个窗口间隔 1 秒
+  let currentIdx = startIdx;
 
-      // 使用弹窗模式（独立窗口而非标签页）
-      const win = window.open(url, 'qq_' + qq, 'width=500,height=400,left=' + (100 + (idx % 5) * 50) + ',top=' + (100 + (idx % 5) * 50));
+  function openNext() {
+    if (currentIdx >= endIdx) {
+      // 本批次完成
+      bcIndex = endIdx;
+      const done = bcIndex;
+      const total = bcQueue.length;
+      document.getElementById('stat-done').textContent = done;
+      document.getElementById('stat-remain').textContent = total - done;
+      document.getElementById('bc-progress-fill').style.width = (done / total * 100) + '%';
 
-      if (win) {
-        openedWindows.push({ win: win, qq: qq });
+      // 从输入框中删除已发送的QQ
+      const sentQQs = bcQueue.slice(startIdx, endIdx);
+      const currentList = document.getElementById('bc-qq-list').value;
+      const lines = currentList.split('\n').map(s => s.trim()).filter(s => s);
+      const remainingLines = lines.filter(line => !sentQQs.includes(line));
+      document.getElementById('bc-qq-list').value = remainingLines.join('\n');
 
-        // 定时关闭弹窗
+      if (bcIndex >= bcQueue.length) {
+        document.getElementById('bc-start-btn').textContent = '✓ 全部完成';
+        document.getElementById('bc-start-btn').disabled = true;
+        document.getElementById('bc-add-btn').disabled = true;
+        toast('完成，共处理 ' + total + ' 个');
+      } else {
+        toast('已处理 ' + done + '/' + total + '，点击继续下一批');
+      }
+      return;
+    }
+
+    const qq = bcQueue[currentIdx];
+    const url = makeURL(qq, bcMode);
+
+    // 使用弹窗模式（独立窗口而非标签页）
+    const win = window.open(url, 'qq_' + qq, 'width=500,height=400,left=' + (100 + (currentIdx % 5) * 50) + ',top=' + (100 + (currentIdx % 5) * 50));
+
+    if (win) {
+      openedWindows.push({ win: win, qq: qq });
+
+      // 仅在自动关闭开启时设置定时关闭
+      if (autoCloseEnabled) {
         setTimeout(function() {
           try {
             if (win && !win.closed) {
@@ -922,37 +1050,23 @@ function openBatch(count) {
           } catch(e) {}
         }, bcStayTime * 1000);
       }
+    }
 
-      const statusEl = document.getElementById('bcstatus-' + idx);
-      if (statusEl) {
-        statusEl.textContent = bcMode === 'add' ? '添加好友' : '已打开';
-        statusEl.className = 'qq-status status-sent';
-      }
-    })(i);
+    const statusEl = document.getElementById('bcstatus-' + currentIdx);
+    if (statusEl) {
+      statusEl.textContent = bcMode === 'add' ? '添加好友' : '已打开';
+      statusEl.className = 'qq-status status-sent';
+    }
+
+    currentIdx++;
+    // 更新进度
+    document.getElementById('stat-done').textContent = bcIndex + (currentIdx - startIdx);
+
+    // 延迟打开下一个
+    setTimeout(openNext, delay);
   }
 
-  bcIndex = endIdx;
-  const done = bcIndex;
-  const total = bcQueue.length;
-  document.getElementById('stat-done').textContent = done;
-  document.getElementById('stat-remain').textContent = total - done;
-  document.getElementById('bc-progress-fill').style.width = (done / total * 100) + '%';
-
-  // 从输入框中删除已发送的QQ
-  const sentQQs = bcQueue.slice(startIdx, endIdx);
-  const currentList = document.getElementById('bc-qq-list').value;
-  const lines = currentList.split('\n').map(s => s.trim()).filter(s => s);
-  const remainingLines = lines.filter(line => !sentQQs.includes(line));
-  document.getElementById('bc-qq-list').value = remainingLines.join('\n');
-
-  if (bcIndex >= bcQueue.length) {
-    document.getElementById('bc-start-btn').textContent = '✓ 全部完成';
-    document.getElementById('bc-start-btn').disabled = true;
-    document.getElementById('bc-add-btn').disabled = true;
-    toast('完成，共处理 ' + total + ' 个');
-  } else {
-    toast('已处理 ' + done + '/' + total + '，点击继续下一批');
-  }
+  openNext();
 }
 
 function closeAllOpenedWindows() {
@@ -969,12 +1083,83 @@ function closeAllOpenedWindows() {
   toast('已关闭 ' + closedCount + ' 个窗口');
 }
 
+// ─── collect failed QQs ──────────────────────────────────────────────────────
+function collectFailedQQs() {
+  // 累加失败的 QQ，而不是覆盖
+  let newFailedQQs = [];
+  openedWindows.forEach(function(item) {
+    try {
+      if (item.win && !item.win.closed) {
+        // 避免重复添加
+        if (!failedQQs.includes(item.qq)) {
+          newFailedQQs.push(item.qq);
+        }
+      }
+    } catch(e) {}
+  });
+
+  // 累加到失败列表
+  failedQQs = failedQQs.concat(newFailedQQs);
+
+  // 更新失败列表 UI
+  renderFailedList();
+
+  // 更新处理队列中的状态
+  failedQQs.forEach(function(qq) {
+    const idx = bcQueue.indexOf(qq);
+    if (idx !== -1) {
+      const statusEl = document.getElementById('bcstatus-' + idx);
+      if (statusEl) {
+        statusEl.textContent = '失败';
+        statusEl.className = 'qq-status status-failed';
+      }
+    }
+  });
+
+  toast('收集到 ' + failedQQs.length + ' 个失败的 QQ');
+}
+
+function renderFailedList() {
+  const card = document.getElementById('failed-list-card');
+  const list = document.getElementById('failed-qq-list');
+  const count = document.getElementById('failed-count');
+
+  if (failedQQs.length === 0) {
+    card.style.display = 'none';
+    return;
+  }
+
+  card.style.display = '';
+  count.textContent = failedQQs.length + ' 个';
+
+  let html = '';
+  failedQQs.forEach(function(qq) {
+    html += '<span class="failed-qq-item">' + qq + '</span>';
+  });
+  list.innerHTML = html;
+}
+
+function copyFailedQQs() {
+  if (failedQQs.length === 0) {
+    toast('没有失败的 QQ');
+    return;
+  }
+  copyText(failedQQs.join('\n'), '已复制 ' + failedQQs.length + ' 个失败的 QQ');
+}
+
+function clearFailedList() {
+  failedQQs = [];
+  renderFailedList();
+  toast('已清空失败列表');
+}
+
 function resetBroadcast() {
   bcRunning = false;
   bcQueue = [];
   bcIndex = 0;
   bcMode = 'session';
   openedWindows = [];
+  failedQQs = [];
   document.getElementById('bc-stats').style.display = 'none';
   document.getElementById('bc-progress-wrap').style.display = 'none';
   document.getElementById('bc-qq-items').innerHTML = '';
@@ -984,6 +1169,8 @@ function resetBroadcast() {
   document.getElementById('bc-add-btn').textContent = '+ 添加好友';
   document.getElementById('bc-add-btn').disabled = false;
   document.getElementById('bc-reset-btn').style.display = 'none';
+  document.getElementById('bc-collect-btn').style.display = 'none';
+  document.getElementById('failed-list-card').style.display = 'none';
 }
 
 // ─── utils ────────────────────────────────────────────────────────────────────
@@ -1018,6 +1205,13 @@ function copyText(text, msg) {
 // 初始化输入框的值
 document.getElementById('bc-batch-size').value = bcBatchSize;
 document.getElementById('bc-stay-time').value = bcStayTime;
+document.getElementById('bc-auto-close').checked = autoCloseEnabled;
+
+// 监听自动关闭开关变化
+document.getElementById('bc-auto-close').addEventListener('change', function() {
+  autoCloseEnabled = this.checked;
+  localStorage.setItem('bc_auto_close', autoCloseEnabled);
+});
 </script>
 </body>
 </html>
