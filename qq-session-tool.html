@@ -722,6 +722,42 @@
     background: var(--border3);
   }
 
+  /* Task Label Card */
+  .task-label-card {
+    border-left: 3px solid var(--primary);
+    margin-bottom: 16px;
+  }
+
+  .task-label-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text3);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+
+  .task-label-content {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .task-name {
+    flex: 1;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text);
+  }
+
+  .task-name-empty {
+    color: var(--text3);
+    font-style: italic;
+  }
+
   /* Reduced Motion */
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after {
@@ -746,10 +782,9 @@
 <div class="app">
 
   <div class="header">
-    <div class="header-content">
+    <div class="header-content" style="display:flex;align-items:center;gap:12px;">
+      <h1 style="margin-bottom:0;"><em>群发助手</em></h1>
       <div class="header-badge"><i class="dot"></i>QQ 工具箱 <em class="version">v1.4.0</em></div>
-      <h1><em>群发助手</em></h1>
-      <p>批量打开 QQ 临时会话窗口，支持分组发送</p>
     </div>
     <button class="theme-toggle" onclick="toggleTheme()" title="切换主题" aria-label="切换主题">
       <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -771,6 +806,15 @@
 
   <!-- 群发消息 -->
   <div id="panel-broadcast">
+    <!-- 任务标签 -->
+    <div class="card task-label-card" id="task-label-card" style="display:none;">
+      <div class="task-label-header">📋 当前任务</div>
+      <div class="task-label-content">
+        <span class="task-name" id="task-name"></span>
+        <button class="btn btn-ghost btn-sm" onclick="editTaskLabel()">编辑</button>
+      </div>
+    </div>
+
     <div class="card">
       <div class="card-label">QQ 号列表（每行一个）</div>
       <textarea id="bc-qq-list" rows="8" placeholder="1234567890&#10;9876543210&#10;..."></textarea>
@@ -793,17 +837,15 @@
           <label for="bc-auto-close" class="checkbox-label">自动关闭窗口</label>
         </div>
       </div>
-      <p class="note" style="margin-top:12px;"><strong>说明：</strong>群发会依次打开QQ临时会话窗口。关闭"自动关闭窗口"后，可手动关闭成功窗口，再点击"收集失败"提取无法发起会话的QQ。</p>
     </div>
 
     <div class="btn-row" style="gap:8px;">
       <button class="btn btn-primary btn-action" onclick="startBroadcast('session')" id="bc-start-btn" style="flex:1;">▶ 打开临时会话</button>
-      <button class="btn btn-ghost" onclick="startBroadcast('add')" id="bc-add-btn" style="flex:1;">+ 添加好友</button>
+      <button class="btn btn-ghost" onclick="resetBroadcast()" id="bc-reset-btn" style="flex:1;">重置</button>
     </div>
     <div class="btn-row" style="gap:8px;margin-top:8px;">
       <button class="btn btn-danger" onclick="closeAllOpenedWindows()" id="bc-close-btn" style="display:none;width:100%;">✕ 关闭所有窗口</button>
       <button class="btn btn-warn" onclick="collectFailedQQs()" id="bc-collect-btn" style="display:none;width:100%;">收集失败</button>
-      <button class="btn btn-ghost" onclick="resetBroadcast()" id="bc-reset-btn" style="display:none;width:100%;">重置</button>
     </div>
 
     <!-- 失败列表区域 -->
@@ -846,7 +888,7 @@
   <!-- 预览确认弹窗 -->
   <div class="modal-overlay" id="preview-modal">
     <div class="modal">
-      <div class="modal-title">确认群发</div>
+      <div class="modal-title" id="preview-modal-title">确认群发</div>
       <div class="modal-content">
         <p id="preview-msg" style="font-size:15px;text-align:center;padding:16px 0;">要发送总共 0 个 QQ 中的 0 个，确定吗？</p>
       </div>
@@ -893,6 +935,53 @@ let openedWindows = []; // 保存已打开的窗口引用
 let bcMode = 'session'; // 'session' 或 'add'
 let failedQQs = []; // 失败的 QQ 列表
 let autoCloseEnabled = localStorage.getItem('bc_auto_close') !== 'false'; // 默认开启
+let taskLabel = ''; // 当前任务标签
+
+// ─── task label ───────────────────────────────────────────────────────────────
+function updateTaskLabelUI() {
+  const card = document.getElementById('task-label-card');
+  const nameEl = document.getElementById('task-name');
+  if (taskLabel) {
+    card.style.display = '';
+    nameEl.textContent = taskLabel;
+    nameEl.classList.remove('task-name-empty');
+  } else {
+    card.style.display = 'none';
+  }
+}
+
+function askTaskLabel() {
+  const input = prompt('请输入任务名称（如：发送产品介绍）');
+  if (input && input.trim()) {
+    taskLabel = input.trim().slice(0, 50);
+    updateTaskLabelUI();
+    // 初始化队列后再显示确认弹窗
+    initQueueAndShowModal();
+  } else if (input !== null) {
+    toast('任务名称不能为空');
+  }
+}
+
+function initQueueAndShowModal() {
+  // 初始化队列
+  if (bcIndex === 0 || bcIndex >= bcQueue.length) {
+    const qqList = parsQQList(document.getElementById('bc-qq-list').value);
+    bcQueue = qqList;
+    bcIndex = 0;
+  }
+  showConfirmModal();
+}
+
+function editTaskLabel() {
+  const input = prompt('编辑任务名称', taskLabel);
+  if (input && input.trim()) {
+    taskLabel = input.trim().slice(0, 50);
+    updateTaskLabelUI();
+    toast('任务名称已更新');
+  } else if (input !== null && input.trim() === '') {
+    toast('任务名称不能为空');
+  }
+}
 
 // ─── toast ────────────────────────────────────────────────────────────────────
 function toast(msg) {
@@ -907,6 +996,12 @@ function startBroadcast(mode) {
   bcMode = mode || 'session';
   const qqList = parsQQList(document.getElementById('bc-qq-list').value);
   if (!qqList.length) { toast('请输入至少一个 QQ 号'); return; }
+
+  // 检查任务标签是否已设置
+  if (!taskLabel) {
+    askTaskLabel();
+    return;
+  }
 
   bcBatchSize = Math.max(1, parseInt(document.getElementById('bc-batch-size').value) || 10);
   bcStayTime = Math.max(1, parseInt(document.getElementById('bc-stay-time').value) || 20);
@@ -930,6 +1025,8 @@ function showConfirmModal() {
   const remaining = bcQueue.length - bcIndex - thisBatch;
 
   const actionText = bcMode === 'add' ? '添加好友' : '打开临时会话';
+  // 更新弹窗标题显示任务名称
+  document.getElementById('preview-modal-title').textContent = '确认群发 - ' + taskLabel;
   // 显示确认弹窗
   document.getElementById('preview-msg').textContent = '已处理 ' + sent + ' 个，此次' + actionText + ' ' + thisBatch + ' 个，还剩 ' + remaining + ' 个';
   document.getElementById('preview-modal').classList.add('show');
@@ -966,8 +1063,6 @@ function confirmBroadcast() {
   document.getElementById('bc-stats').style.display = 'flex';
   document.getElementById('bc-progress-wrap').style.display = 'block';
   document.getElementById('bc-start-btn').textContent = '▶ 继续打开会话';
-  document.getElementById('bc-add-btn').textContent = '+ 继续添加好友';
-  document.getElementById('bc-reset-btn').style.display = '';
   document.getElementById('bc-collect-btn').style.display = '';
   document.getElementById('stat-total').textContent = bcQueue.length;
   document.getElementById('stat-done').textContent = bcIndex;
@@ -1023,7 +1118,6 @@ function openBatch(count) {
       if (bcIndex >= bcQueue.length) {
         document.getElementById('bc-start-btn').textContent = '✓ 全部完成';
         document.getElementById('bc-start-btn').disabled = true;
-        document.getElementById('bc-add-btn').disabled = true;
         toast('完成，共处理 ' + total + ' 个');
       } else {
         toast('已处理 ' + done + '/' + total + '，点击继续下一批');
@@ -1160,17 +1254,16 @@ function resetBroadcast() {
   bcMode = 'session';
   openedWindows = [];
   failedQQs = [];
+  taskLabel = ''; // 清空任务标签
   document.getElementById('bc-stats').style.display = 'none';
   document.getElementById('bc-progress-wrap').style.display = 'none';
   document.getElementById('bc-qq-items').innerHTML = '';
   document.getElementById('bc-start-btn').textContent = '▶ 打开临时会话';
   document.getElementById('bc-start-btn').disabled = false;
   document.getElementById('bc-start-btn').style.display = '';
-  document.getElementById('bc-add-btn').textContent = '+ 添加好友';
-  document.getElementById('bc-add-btn').disabled = false;
-  document.getElementById('bc-reset-btn').style.display = 'none';
   document.getElementById('bc-collect-btn').style.display = 'none';
   document.getElementById('failed-list-card').style.display = 'none';
+  document.getElementById('task-label-card').style.display = 'none'; // 隐藏任务标签卡片
 }
 
 // ─── utils ────────────────────────────────────────────────────────────────────
