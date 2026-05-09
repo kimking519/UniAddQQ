@@ -836,6 +836,11 @@
           <input type="checkbox" id="bc-auto-close" checked>
           <label for="bc-auto-close" class="checkbox-label">自动关闭窗口</label>
         </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:14px;color:var(--text2);">打开间隔</span>
+          <input type="number" id="bc-delay" value="1000" min="100" max="5000" step="100" style="width:80px;">
+          <span style="font-size:14px;color:var(--text3);">毫秒</span>
+        </div>
       </div>
     </div>
 
@@ -931,6 +936,7 @@ let bcQueue = [];
 let bcIndex = 0;
 let bcBatchSize = parseInt(localStorage.getItem('bc_batch_size')) || 10;
 let bcStayTime = parseInt(localStorage.getItem('bc_stay_time')) || 20;
+let bcDelay = parseInt(localStorage.getItem('bc_delay')) || 1000;
 let openedWindows = []; // 保存已打开的窗口引用
 let bcMode = 'session'; // 'session' 或 'add'
 let failedQQs = []; // 失败的 QQ 列表
@@ -1005,10 +1011,12 @@ function startBroadcast(mode) {
 
   bcBatchSize = Math.max(1, parseInt(document.getElementById('bc-batch-size').value) || 10);
   bcStayTime = Math.max(1, parseInt(document.getElementById('bc-stay-time').value) || 20);
+  bcDelay = Math.max(100, parseInt(document.getElementById('bc-delay').value) || 1000);
 
   // 保存设置到 localStorage
   localStorage.setItem('bc_batch_size', bcBatchSize);
   localStorage.setItem('bc_stay_time', bcStayTime);
+  localStorage.setItem('bc_delay', bcDelay);
 
   // 如果是首次或重置后，初始化队列
   if (bcIndex === 0 || bcIndex >= bcQueue.length) {
@@ -1052,6 +1060,8 @@ function confirmBroadcast() {
 
   bcBatchSize = Math.max(1, parseInt(document.getElementById('bc-batch-size').value) || 10);
   bcStayTime = Math.max(1, parseInt(document.getElementById('bc-stay-time').value) || 20);
+  bcDelay = Math.max(100, parseInt(document.getElementById('bc-delay').value) || 1000);
+  localStorage.setItem('bc_delay', bcDelay);
 
   // 计算本批次
   const remaining = bcQueue.length - bcIndex;
@@ -1095,7 +1105,7 @@ function openBatch(count) {
   document.getElementById('bc-close-btn').style.display = '';
 
   // 延迟依次打开窗口，避免浏览器拦截
-  const delay = 1000; // 每个窗口间隔 1 秒
+  const delay = bcDelay;
   let currentIdx = startIdx;
 
   function openNext() {
@@ -1108,12 +1118,7 @@ function openBatch(count) {
       document.getElementById('stat-remain').textContent = total - done;
       document.getElementById('bc-progress-fill').style.width = (done / total * 100) + '%';
 
-      // 从输入框中删除已发送的QQ
-      const sentQQs = bcQueue.slice(startIdx, endIdx);
-      const currentList = document.getElementById('bc-qq-list').value;
-      const lines = currentList.split('\n').map(s => s.trim()).filter(s => s);
-      const remainingLines = lines.filter(line => !sentQQs.includes(line));
-      document.getElementById('bc-qq-list').value = remainingLines.join('\n');
+      // 不删除输入框中的 QQ，保持原样
 
       if (bcIndex >= bcQueue.length) {
         document.getElementById('bc-start-btn').textContent = '✓ 全部完成';
@@ -1253,7 +1258,7 @@ function resetBroadcast() {
   bcIndex = 0;
   bcMode = 'session';
   openedWindows = [];
-  failedQQs = [];
+  // 不清空 failedQQs，保持累加
   taskLabel = ''; // 清空任务标签
   document.getElementById('bc-stats').style.display = 'none';
   document.getElementById('bc-progress-wrap').style.display = 'none';
@@ -1298,6 +1303,7 @@ function copyText(text, msg) {
 // 初始化输入框的值
 document.getElementById('bc-batch-size').value = bcBatchSize;
 document.getElementById('bc-stay-time').value = bcStayTime;
+document.getElementById('bc-delay').value = bcDelay;
 document.getElementById('bc-auto-close').checked = autoCloseEnabled;
 
 // 监听自动关闭开关变化
