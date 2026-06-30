@@ -1145,13 +1145,9 @@ function openBatch(count) {
     const url = makeURL(qq, bcMode);
 
     // 使用弹窗模式（独立窗口而非标签页）
-    // 先开 about:blank 再 location 跳转，规避 Chrome 对连续非用户手势弹窗的拦截
-    // （直接 window.open(url) 连续多个会被阻断为空白窗口，需地址栏回车才跳转）
-    const win = window.open('about:blank', 'qq_' + qq, 'width=500,height=400,left=' + (100 + (currentIdx % 5) * 50) + ',top=' + (100 + (currentIdx % 5) * 50));
+    const win = window.open(url, 'qq_' + qq, 'width=500,height=400,left=' + (100 + (currentIdx % 5) * 50) + ',top=' + (100 + (currentIdx % 5) * 50));
 
     if (win) {
-      // 跨域设置 location 是允许的（只有读才被同源策略禁止）
-      win.location.href = url;
       openedWindows.push({ win: win, qq: qq });
 
       // 仅在自动关闭开启时设置定时关闭
