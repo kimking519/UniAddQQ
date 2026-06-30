@@ -1,0 +1,16 @@
+# oh-my-claudecode internal state (agent sessions, replay, mission state)
+.omc/
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
