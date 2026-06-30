@@ -836,6 +836,10 @@
           <input type="checkbox" id="bc-auto-close" checked>
           <label for="bc-auto-close" class="checkbox-label">自动关闭窗口</label>
         </div>
+        <div class="checkbox-row">
+          <input type="checkbox" id="bc-auto-collect-close">
+          <label for="bc-auto-collect-close" class="checkbox-label">继续时自动收集并关闭</label>
+        </div>
         <div style="display:flex;align-items:center;gap:8px;">
           <span style="font-size:14px;color:var(--text2);">打开间隔</span>
           <input type="number" id="bc-delay" value="1000" min="100" max="5000" step="100" style="width:80px;">
@@ -941,6 +945,7 @@ let openedWindows = []; // 保存已打开的窗口引用
 let bcMode = 'session'; // 'session' 或 'add'
 let failedQQs = []; // 失败的 QQ 列表
 let autoCloseEnabled = localStorage.getItem('bc_auto_close') !== 'false'; // 默认开启
+let autoCollectCloseEnabled = localStorage.getItem('bc_auto_collect_close') === 'true'; // 默认关闭：继续时自动收集失败 + 关闭窗口
 let taskLabel = ''; // 当前任务标签
 
 // ─── task label ───────────────────────────────────────────────────────────────
@@ -1062,6 +1067,12 @@ function confirmBroadcast() {
   bcStayTime = Math.max(1, parseInt(document.getElementById('bc-stay-time').value) || 20);
   bcDelay = Math.max(100, parseInt(document.getElementById('bc-delay').value) || 1000);
   localStorage.setItem('bc_delay', bcDelay);
+
+  // 继续时自动收集失败 + 关闭窗口（首批跳过）
+  if (autoCollectCloseEnabled && bcIndex > 0 && openedWindows.length > 0) {
+    collectFailedQQs();
+    closeAllOpenedWindows();
+  }
 
   // 计算本批次
   const remaining = bcQueue.length - bcIndex;
@@ -1305,11 +1316,16 @@ document.getElementById('bc-batch-size').value = bcBatchSize;
 document.getElementById('bc-stay-time').value = bcStayTime;
 document.getElementById('bc-delay').value = bcDelay;
 document.getElementById('bc-auto-close').checked = autoCloseEnabled;
-
 // 监听自动关闭开关变化
 document.getElementById('bc-auto-close').addEventListener('change', function() {
   autoCloseEnabled = this.checked;
   localStorage.setItem('bc_auto_close', autoCloseEnabled);
+});
+document.getElementById('bc-auto-collect-close').checked = autoCollectCloseEnabled;
+// 监听"继续时自动收集并关闭"开关变化
+document.getElementById('bc-auto-collect-close').addEventListener('change', function() {
+  autoCollectCloseEnabled = this.checked;
+  localStorage.setItem('bc_auto_collect_close', autoCollectCloseEnabled);
 });
 </script>
 </body>
