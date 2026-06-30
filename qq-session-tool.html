@@ -974,6 +974,14 @@ function askTaskLabel() {
 }
 
 function initQueueAndShowModal() {
+  // 读取最新设置（askTaskLabel 分支会跳过 startBroadcast 里的读取）
+  bcBatchSize = Math.max(1, parseInt(document.getElementById('bc-batch-size').value) || 10);
+  bcStayTime = Math.max(1, parseInt(document.getElementById('bc-stay-time').value) || 20);
+  bcDelay = Math.max(100, parseInt(document.getElementById('bc-delay').value) || 1000);
+  localStorage.setItem('bc_batch_size', bcBatchSize);
+  localStorage.setItem('bc_stay_time', bcStayTime);
+  localStorage.setItem('bc_delay', bcDelay);
+
   // 初始化队列
   if (bcIndex === 0 || bcIndex >= bcQueue.length) {
     const qqList = parsQQList(document.getElementById('bc-qq-list').value);
