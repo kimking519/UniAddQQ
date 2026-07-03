@@ -913,7 +913,6 @@
     <div class="btn-row" style="gap:8px;margin-top:8px;">
       <button class="btn btn-danger" onclick="closeAllOpenedWindows()" id="bc-close-btn" style="display:none;width:100%;">✕ 关闭所有窗口</button>
       <button class="btn btn-warn" onclick="collectFailedQQs()" id="bc-collect-btn" style="display:none;width:100%;">收集失败</button>
-      <button class="btn btn-ghost" onclick="forceRefreshAll()" id="bc-refresh-all-btn" style="display:none;width:100%;">🔄 关闭所有弹窗</button>
     </div>
 
     <!-- 失败列表区域 -->
@@ -1153,7 +1152,6 @@ function confirmBroadcast() {
   document.getElementById('bc-progress-wrap').style.display = 'block';
   document.getElementById('bc-start-btn').textContent = '▶ 继续打开会话';
   document.getElementById('bc-collect-btn').style.display = '';
-  document.getElementById('bc-refresh-all-btn').style.display = '';
   document.getElementById('stat-total').textContent = bcQueue.length;
   document.getElementById('stat-done').textContent = bcIndex;
   document.getElementById('stat-remain').textContent = remaining;
@@ -1276,24 +1274,6 @@ function closeAllOpenedWindows() {
   });
   openedWindows = [];
   toast('已关闭 ' + closedCount + ' 个窗口');
-}
-
-// ─── force refresh all ───────────────────────────────────────────────────────
-function forceRefreshAll() {
-  // 关闭所有已打开的弹窗，让用户重新发起
-  var closed = 0;
-  openedWindows.forEach(function(item) {
-    try {
-      if (item.win && !item.win.closed) {
-        item.win.close();
-        closed++;
-      }
-    } catch(e) {}
-  });
-  openedWindows = [];
-  toast('已关闭 ' + closed + ' 个弹窗，可继续打开');
-}
-
 // ─── refresh single QQ ──────────────────────────────────────────────────────
 function refreshSingleQQ(qq, idx) {
   // 关闭对应弹窗
@@ -1425,7 +1405,6 @@ function resetBroadcast() {
   document.getElementById('bc-start-btn').disabled = false;
   document.getElementById('bc-start-btn').style.display = '';
   document.getElementById('bc-collect-btn').style.display = 'none';
-  document.getElementById('bc-refresh-all-btn').style.display = 'none';
   document.getElementById('failed-list-card').style.display = 'none';
   document.getElementById('task-label-card').style.display = 'none'; // 隐藏任务标签卡片
 }
