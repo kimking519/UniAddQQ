@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
@@ -908,11 +908,11 @@
 
     <div class="btn-row" style="gap:8px;">
       <button class="btn btn-primary btn-action" onclick="startBroadcast('session')" id="bc-start-btn" style="flex:1;">▶ 打开临时会话</button>
-      <button class="btn btn-ghost" onclick="resetBroadcast()" id="bc-reset-btn" style="flex:1;">重置</button>
     </div>
     <div class="btn-row" style="gap:8px;margin-top:8px;">
-      <button class="btn btn-danger" onclick="closeAllOpenedWindows()" id="bc-close-btn" style="display:none;width:100%;">✕ 关闭所有窗口</button>
-      <button class="btn btn-warn" onclick="collectFailedQQs()" id="bc-collect-btn" style="display:none;width:100%;">收集失败</button>
+      <button class="btn btn-danger" onclick="closeAllOpenedWindows()" id="bc-close-btn" style="display:none;flex:1;">✕ 关闭所有窗口</button>
+      <button class="btn btn-warn" onclick="collectFailedQQs()" id="bc-collect-btn" style="display:none;flex:1;">收集失败</button>
+      <button class="btn btn-ghost" onclick="resetBroadcast()" id="bc-reset-btn" style="flex:1;">重置</button>
     </div>
 
     <!-- 失败列表区域 -->
@@ -1228,6 +1228,16 @@ function openBatch(count) {
         setTimeout(function() {
           try {
             if (win && !win.closed) {
+              // 关闭前先收集：停留时间到期仍未被用户关闭 = 失败
+              if (!failedQQs.includes(qq)) {
+                failedQQs.push(qq);
+                renderFailedList();
+                const fIdx = bcQueue.indexOf(qq);
+                if (fIdx !== -1) {
+                  const fEl = document.getElementById('bcstatus-' + fIdx);
+                  if (fEl) { fEl.textContent = '失败'; fEl.className = 'qq-status status-failed'; }
+                }
+              }
               win.close();
             }
           } catch(e) {}
